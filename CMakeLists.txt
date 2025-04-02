@@ -27,7 +27,7 @@ target_include_directories(
     ${duckdb_src}/src/include
 )
 
-if (target MATCHES "win32") {
+if (target MATCHES "win32")
     add_definitions(-DDUCKDB_STATIC_BUILD)
     target_compile_definitions(
         ${bare_duckdb}
