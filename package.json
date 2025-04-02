@@ -1,0 +1,43 @@
+{
+    "name": "bare-duckdb",
+    "version": "0.0.0",
+    "description": "",
+    "exports": {
+        ".": "./index.js",
+        "./package": "./package.json"
+    },
+    "files": [
+        "index.js",
+        "binding.c",
+        "binding.js",
+        "CMakeLists.txt",
+        "prebuilds"
+    ],
+    "addon": true,
+    "scripts": {
+        "test": "bare test/**.test.js",
+        "fmt": "dxv fmt -c .config/dprint.jsonc",
+        "lint": "dxv lint -c .config/eslint.config.js",
+        "deps": "dxv deps -c .config/.depcheckrc",
+        "type": "dxv type -c .config/tsconfig.json"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/holepunchto/bare-addon.git"
+    },
+    "author": "Holepunch",
+    "license": "Apache-2.0",
+    "bugs": {
+        "url": "https://github.com/holepunchto/bare-addon/issues"
+    },
+    "homepage": "https://github.com/holepunchto/bare-addon#readme",
+    "devDependencies": {
+        "@dxv/cli": "^2.0.4",
+        "bare-compat-napi": "^1.3.0",
+        "brittle": "^3.13.1",
+        "cmake-bare": "^1.5.4",
+        "cmake-fetch": "^1.4.1",
+        "cmake-napi": "^1.1.3",
+        "cmake-npm": "^1.1.0"
+    }
+}

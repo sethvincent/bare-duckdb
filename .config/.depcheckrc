@@ -1,0 +1,16 @@
+# depcheck
+
+# See more at https://github.com/depcheck/depcheck
+
+# ignore packages with bin entry
+ignoreBinPackage: false
+
+# skip calculation of missing dependencies
+skipMissing: false
+
+# ignore dependencies that matches these globs
+# @eslint/js and globals are dependencies of dxv so they are ignored
+ignoreMatches: ["@eslint/js", "globals"]
+
+# patterns matching these globs will be ignored
+ignorePatterns: []

@@ -1,0 +1,67 @@
+// See more configuration options:
+// https://www.typescriptlang.org/tsconfig
+
+{
+    // All JS and declaration files
+    "include": [
+        "../**/*.js",
+        "../**/*.d.ts"
+    ],
+
+    "exclude": [
+        "../node_modules",
+        "../.config/**/*",
+        "../.config/**/*.d.ts",
+        "../**/*.test.js",
+        "../**/*.config.js",
+        "../**/example.js",
+        "../types/**/*.d.ts",
+        "../test/**/*"
+    ],
+
+    "compilerOptions": {
+        // Type definition locations
+        "typeRoots": [
+            "../types",
+            "../node_modules/@types"
+        ],
+
+        // Generate declaration files
+        "outDir": "../types", // Output directory for declarations
+        "declaration": true, // Output .d.ts files
+        "emitDeclarationOnly": true, // Only output declarations, not JS
+
+        // Language settings
+        "target": "ESNext", // Latest ECMAScript features
+        "module": "ES2022", // ES modules
+        "moduleResolution": "node", // Node.js resolution
+
+        // JavaScript handling
+        "allowJs": true, // Include JS files
+        "checkJs": true, // Type-check JS files
+
+        // Module compatibility
+        "esModuleInterop": true, // Better CommonJS imports
+        "forceConsistentCasingInFileNames": true, // Consistent file casing
+
+        // Strictness (balanced for your pleasure)
+        "strict": false, // Disable strict mode default
+        "noImplicitAny": true, // Require basic types
+        "strictNullChecks": false, // More flexible null handling
+        "strictFunctionTypes": true, // Type-safe function params
+        "strictBindCallApply": true, // Type-safe function methods
+        "strictPropertyInitialization": false, // Flexible property init
+
+        // Error reduction (we're here to hack, not play whack-a-type
+        "suppressImplicitAnyIndexErrors": false, // Allow indexing
+        "useUnknownInCatchVariables": false, // Simpler error handling
+        "noPropertyAccessFromIndexSignature": false, // Allow string indexing
+        "noImplicitThis": false, // Flexible this
+        "alwaysStrict": false, // No "use strict"
+        "noUnusedParameters": false, // Allow unused params
+
+        // Performance
+        "skipLibCheck": true, // Faster compilation
+        "isolatedModules": true // Independent module transpilation
+    }
+}
