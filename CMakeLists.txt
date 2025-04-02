@@ -25,26 +25,6 @@ target_include_directories(
   ${bare_duckdb}
   PRIVATE
     ${duckdb_src}/src/include
-    ${duckdb_src}/third_party/fsst
-    ${duckdb_src}/third_party/fmt/include
-    ${duckdb_src}/third_party/hyperloglog
-    ${duckdb_src}/third_party/fastpforlib
-    ${duckdb_src}/third_party/skiplist
-    ${duckdb_src}/third_party/fast_float
-    ${duckdb_src}/third_party/re2
-    ${duckdb_src}/third_party/miniz
-    ${duckdb_src}/third_party/utf8proc/include
-    ${duckdb_src}/third_party/concurrentqueue
-    ${duckdb_src}/third_party/pcg
-    ${duckdb_src}/third_party/tdigest
-    ${duckdb_src}/third_party/mbedtls/include
-    ${duckdb_src}/third_party/jaro_winkler
-    ${duckdb_src}/third_party/yyjson/include
-    ${duckdb_src}/third_party/zstd/include
-    # For GitHub Actions environment
-    $<$<CXX_COMPILER_ID:GNU>:/usr/include/c++/${CMAKE_CXX_COMPILER_VERSION}>
-    $<$<CXX_COMPILER_ID:GNU>:/usr/include/x86_64-linux-gnu/c++/${CMAKE_CXX_COMPILER_VERSION}>
-    $<$<CXX_COMPILER_ID:Clang>:/usr/include/c++/v1>
 )
 
 target_link_libraries(
