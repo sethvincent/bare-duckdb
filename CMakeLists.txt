@@ -27,6 +27,24 @@ target_include_directories(
     ${duckdb_src}/src/include
 )
 
+if (target MATCHES "win32") {
+    add_definitions(-DDUCKDB_STATIC_BUILD)
+    target_compile_definitions(
+        ${bare_duckdb}
+        PRIVATE
+        DUCKDB_STATIC_BUILD
+    )
+    get_target_property(DUCKDB_COMPILE_DEFS duckdb_static COMPILE_DEFINITIONS)
+
+    if(DUCKDB_COMPILE_DEFS)
+        list(APPEND DUCKDB_COMPILE_DEFS DUCKDB_STATIC_BUILD)
+    else()
+        set(DUCKDB_COMPILE_DEFS DUCKDB_STATIC_BUILD)
+    endif()
+
+    set_target_properties(duckdb_static PROPERTIES COMPILE_DEFINITIONS "${DUCKDB_COMPILE_DEFS}")
+}
+
 target_link_libraries(
   ${bare_duckdb}
   PUBLIC
