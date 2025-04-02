@@ -43,7 +43,7 @@ if (target MATCHES "win32") {
     endif()
 
     set_target_properties(duckdb_static PROPERTIES COMPILE_DEFINITIONS "${DUCKDB_COMPILE_DEFS}")
-}
+endif()
 
 target_link_libraries(
   ${bare_duckdb}
