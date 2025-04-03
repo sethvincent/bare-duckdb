@@ -36,6 +36,16 @@ typedef struct {
     char *error;
 } bare_duckdb_query_t;
 
+static void
+finalize_duckdb_result(js_env_t *env, void *data, void * hint) {
+    duckdb_result *result = (duckdb_result *) data;
+
+    if (result) {
+        duckdb_destroy_result(result);
+        free(result);
+    }
+}
+
 static js_value_t *
 bare_duckdb_open(js_env_t *env, js_callback_info_t *info) {
     int err;
@@ -78,6 +88,7 @@ bare_duckdb_open(js_env_t *env, js_callback_info_t *info) {
     if (duckdb_create_config(&config) != DuckDBSuccess) {
         if (path) free(path);
         free(db);
+        duckdb_destroy_config(&config);
         js_throw_error(env, "Error", "Could not create config");
         return NULL;
     }
@@ -102,7 +113,7 @@ bare_duckdb_open(js_env_t *env, js_callback_info_t *info) {
     if (path) free(path);
 
     js_value_t *handle;
-    err = js_create_external(env, db, NULL, NULL, &handle);
+    err = js_create_external(env, db, finalize_duckdb_result, NULL, &handle);
     assert(err == 0);
     return handle;
 }
@@ -163,10 +174,13 @@ bare_duckdb__on_after_connect(uv_work_t *handle, int status) {
         // duckdb error
         err = js_create_string_utf8(env, (const utf8_t *) req->error, - 1, &result);
         assert(err == 0);
+    } else if (req->db->connection == NULL) {
+        err = js_create_string_utf8(env, (const utf8_t *) "Connection failed", -1, &result);
+        assert(err == 0);
     } else {
         // we did it
         js_value_t *db_handle;
-        err = js_create_external(env, (void*) req->db, NULL, NULL, &db_handle);
+        err = js_create_external(env, (void*) req->db, finalize_duckdb_result, NULL, &db_handle);
         assert(err == 0);
         result = db_handle;
     }
@@ -215,6 +229,11 @@ bare_duckdb_connect(js_env_t *env, js_callback_info_t *info) {
     bare_duckdb_t *db;
     err = js_get_value_external(env, argv[0], (void **) &db);
     assert(err == 0);
+
+    if (!db || !db->handle) {
+        js_throw_error(env, "Error", "Invalid database handle");
+        return NULL;
+    }
 
     bare_duckdb_connect_t *req = malloc(sizeof(bare_duckdb_connect_t));
     if (!req) {
@@ -268,16 +287,6 @@ bare_duckdb_disconnect(js_env_t *env, js_callback_info_t *info) {
     err = js_get_undefined(env, &undefined);
     assert(err == 0);
     return undefined;
-}
-
-static void
-finalize_duckdb_result(js_env_t *env, void *data, void * hint) {
-    duckdb_result *result = (duckdb_result *) data;
-
-    if (result) {
-        duckdb_destroy_result(result);
-        free(result);
-    }
 }
 
 static js_value_t *
@@ -459,7 +468,7 @@ bare_duckdb_query(js_env_t *env, js_callback_info_t *info) {
         js_throw_error(env, "Error", "Out of memory");
         return NULL;
     }
-    err = js_get_value_string_utf8(env, argv[1], (utf8_t *) query, query_len, NULL);
+    err = js_get_value_string_utf8(env, argv[1], (utf8_t *) query, query_len + 1, NULL);
     assert(err == 0);
 
     bare_duckdb_query_t *req = malloc(sizeof(bare_duckdb_query_t));
@@ -477,7 +486,12 @@ bare_duckdb_query(js_env_t *env, js_callback_info_t *info) {
 
     js_value_t *promise;
     err = js_create_promise(env, &req->deferred, &promise);
-    assert(err == 0);
+    if (err != 0) {
+        free(query);
+        free(req);
+        js_throw_error(env, "Error", "Failed to create promise");
+        return NULL;
+    }
 
     uv_loop_t *loop;
     err = js_get_env_loop(env, &loop);
