@@ -23,12 +23,12 @@ class Duckdb {
     }
 
     async connect () {
-        this.connection = await binding.connect(this.duckdb)
+        await binding.connect(this.duckdb)
     }
 
     disconnect () {
-        binding.disconnect(this.connection)
-        this.connection = undefined
+        console.log(this.duckdb)
+        binding.disconnect()
     }
 
     async query (sqlQuery) {

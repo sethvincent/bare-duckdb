@@ -15,7 +15,7 @@
     ],
     "addon": true,
     "scripts": {
-        "test": "bare test/**.test.js",
+        "test": "bare test/index.test.js",
         "fmt": "dxv fmt -c .config/dprint.jsonc",
         "lint": "dxv lint -c .config/eslint.config.js",
         "deps": "dxv deps -c .config/.depcheckrc",

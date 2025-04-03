@@ -22,12 +22,6 @@ typedef struct {
 } bare_duckdb_connect_t;
 
 typedef struct {
-  uv_work_t handle;
-  bare_duckdb_t *db;
-  js_deferred_t *deferred;
-} bare_duckdb_disconnect_t;
-
-typedef struct {
     uv_work_t handle;
     bare_duckdb_t *db;
     js_deferred_t *deferred;
@@ -37,13 +31,24 @@ typedef struct {
 } bare_duckdb_query_t;
 
 static void
-finalize_duckdb_result(js_env_t *env, void *data, void * hint) {
-    duckdb_result *result = (duckdb_result *) data;
+finalize_bare_duckdb(js_env_t *env, void *data, void *hint) {
+  bare_duckdb_t *db = (bare_duckdb_t *) data;
 
-    if (result) {
-        duckdb_destroy_result(result);
-        free(result);
-    }
+  if (db == NULL) {
+    return;
+  }
+
+  if (db->connection) {
+    duckdb_disconnect(&db->connection);
+    db->connection = NULL;
+  }
+
+  if (db->handle) {
+    duckdb_close(&db->handle);
+    db->handle = NULL;
+  }
+
+  free(db);
 }
 
 static js_value_t *
@@ -83,6 +88,7 @@ bare_duckdb_open(js_env_t *env, js_callback_info_t *info) {
 
     db->env = env;
     db->connection = NULL;
+    db->handle = NULL;
 
     duckdb_config config;
     if (duckdb_create_config(&config) != DuckDBSuccess) {
@@ -95,7 +101,7 @@ bare_duckdb_open(js_env_t *env, js_callback_info_t *info) {
 
     // TODO: pass config from js
 
-    char *open_error;
+    char *open_error = NULL;
     if (duckdb_open_ext(path, &db->handle, config, &open_error) != DuckDBSuccess) {
         js_value_t *error;
         err = js_create_string_utf8(env, (utf8_t *) open_error, -1, &error);
@@ -113,7 +119,7 @@ bare_duckdb_open(js_env_t *env, js_callback_info_t *info) {
     if (path) free(path);
 
     js_value_t *handle;
-    err = js_create_external(env, db, finalize_duckdb_result, NULL, &handle);
+    err = js_create_external(env, db, finalize_bare_duckdb, NULL, &handle);
     assert(err == 0);
     return handle;
 }
@@ -136,6 +142,10 @@ bare_duckdb_close(js_env_t *env, js_callback_info_t *info) {
     err = js_get_value_external(env, argv[0], (void **) &db);
     assert(err == 0);
 
+    if (db == NULL) {
+      return NULL;
+    }
+
     if (db->connection) {
         duckdb_disconnect(&db->connection);
         db->connection = NULL;
@@ -145,8 +155,6 @@ bare_duckdb_close(js_env_t *env, js_callback_info_t *info) {
         duckdb_close(&db->handle);
         db->handle = NULL;
     }
-
-    free(db);
 
     js_value_t *undefined;
     err = js_get_undefined(env, &undefined);
@@ -170,24 +178,20 @@ bare_duckdb__on_after_connect(uv_work_t *handle, int status) {
         // libuv error
         err = js_create_string_utf8(env, (const utf8_t *) uv_strerror(status), -1, &result);
         assert(err == 0);
+        js_reject_deferred(env, req->deferred, result);
     } else if (req->error != NULL) {
         // duckdb error
         err = js_create_string_utf8(env, (const utf8_t *) req->error, - 1, &result);
         assert(err == 0);
+        js_reject_deferred(env, req->deferred, result);
     } else if (req->db->connection == NULL) {
         err = js_create_string_utf8(env, (const utf8_t *) "Connection failed", -1, &result);
         assert(err == 0);
-    } else {
-        // we did it
-        js_value_t *db_handle;
-        err = js_create_external(env, (void*) req->db, finalize_duckdb_result, NULL, &db_handle);
-        assert(err == 0);
-        result = db_handle;
-    }
-
-    if (status < 0 || req->error != NULL) {
         js_reject_deferred(env, req->deferred, result);
     } else {
+        // we did it
+        err = js_get_undefined(env, &result);
+        assert(err == 0);
         js_resolve_deferred(env, req->deferred, result);
     }
 
@@ -405,10 +409,18 @@ bare_duckdb__on_after_query(uv_work_t *handle, int status) {
 
     if (req->error) {
         free(req->error);
+        req->error = NULL;
     }
 
     if (req->query) {
         free(req->query);
+        req->query = NULL;
+    }
+
+    if (req->result != NULL) {
+        duckdb_destroy_result(req->result);
+        free(req->result);
+        req->result = NULL;
     }
 
     free(req);
@@ -420,7 +432,7 @@ bare_duckdb__on_before_query(uv_work_t *handle) {
 
     req->result = malloc(sizeof(duckdb_result));
     if (req->result == NULL) {
-        req->error = strdup("Out of memory");
+        req->error = strdup("Out of memory allocating duckdb query result");
         return;
     }
 
