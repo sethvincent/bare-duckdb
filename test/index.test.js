@@ -41,6 +41,5 @@ test('hello bindings', async (t) => {
         t.ok(Array.isArray(stringResult), 'stringResult should be an array')
         t.is(stringResult[0].text, 'hello', 'text in the first row should be "hello"')
 
-        await duckdb.disconnect(connection)
         await duckdb.close(db)
 })
