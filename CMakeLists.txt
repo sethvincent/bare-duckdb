@@ -10,6 +10,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_MACOSX_BUNDLE OFF)
+set(ENABLE_SANITIZER FALSE CACHE BOOL "Enable address sanitizer" FORCE)
+set(ENABLE_UBSAN FALSE CACHE BOOL "Enable undefined behavior sanitizer" FORCE)
 
 fetch_package("github:duckdb/duckdb@1.2.1" SOURCE_DIR duckdb_src)
 
