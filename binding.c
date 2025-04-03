@@ -1,5 +1,4 @@
 #include "uv.h"
-#include <assert.h>
 #include <bare.h>
 #include <js.h>
 #include <utf.h>
@@ -58,31 +57,40 @@ bare_duckdb_open(js_env_t *env, js_callback_info_t *info) {
     js_value_t *argv[1];
 
     err = js_get_callback_info(env, info, &argc, argv, NULL, NULL);
-    assert(err == 0);
+    if (err != 0) {
+        js_throw_error(env, NULL, "Failed to get pathname for duckdb");
+        return NULL;
+    }
 
     size_t path_len = 0;
     bool is_undefined;
     if (argc > 0 && js_is_undefined(env, argv[0], &is_undefined)) {
         err = js_get_value_string_utf8(env, argv[0], NULL, 0, &path_len);
-        assert(err == 0);
+        if (err != 0) {
+            js_throw_error(env, NULL, "Failed to get pathname for duckdb");
+            return NULL;
+        }
     }
 
     char *path = NULL;
     if (path_len > 0) {
         path = malloc(path_len + 1);
         if (path == NULL) {
-            js_throw_error(env, "Error", "Out of memory");
+            js_throw_error(env, NULL, "Out of memory");
             return NULL;
         }
         err = js_get_value_string_utf8(env, argv[0], (utf8_t *) path, path_len + 1, NULL);
-        assert(err == 0);
+        if (err != 0) {
+            js_throw_error(env, NULL, "Failed to get pathname for duckdb");
+            return NULL;
+        }
     }
 
 
     bare_duckdb_t *db = malloc(sizeof(bare_duckdb_t));
     if (db == NULL) {
         if (path) free(path);
-        js_throw_error(env, "Error", "Out of Memory");
+        js_throw_error(env, NULL, "Out of Memory");
         return NULL;
     }
 
@@ -95,7 +103,7 @@ bare_duckdb_open(js_env_t *env, js_callback_info_t *info) {
         if (path) free(path);
         free(db);
         duckdb_destroy_config(&config);
-        js_throw_error(env, "Error", "Could not create config");
+        js_throw_error(env, NULL, "Could not create config");
         return NULL;
     }
 
@@ -105,7 +113,10 @@ bare_duckdb_open(js_env_t *env, js_callback_info_t *info) {
     if (duckdb_open_ext(path, &db->handle, config, &open_error) != DuckDBSuccess) {
         js_value_t *error;
         err = js_create_string_utf8(env, (utf8_t *) open_error, -1, &error);
-        assert(err == 0);
+        if (err != 0) {
+            js_throw_error(env, NULL, "Failed to open duckdb");
+            return NULL;
+        }
         if (open_error) duckdb_free(open_error);
         js_throw(env, error);
 
@@ -120,7 +131,14 @@ bare_duckdb_open(js_env_t *env, js_callback_info_t *info) {
 
     js_value_t *handle;
     err = js_create_external(env, db, finalize_bare_duckdb, NULL, &handle);
-    assert(err == 0);
+    if (err != 0) {
+            if (db->connection) duckdb_disconnect(&db->connection);
+            if (db->handle) duckdb_close(&db->handle);
+            free(db);
+
+            js_throw_error(env, NULL, "Failed to open duckdb");
+            return NULL;
+        }
     return handle;
 }
 
@@ -131,16 +149,22 @@ bare_duckdb_close(js_env_t *env, js_callback_info_t *info) {
     js_value_t *argv[1];
 
     err = js_get_callback_info(env, info, &argc, argv, NULL, NULL);
-    assert(err == 0);
+    if (err != 0) {
+        js_throw_error(env, NULL, "Failed to close database");
+        return NULL;
+    }
 
     if (argc != 1) {
-        js_throw_error(env, "Error", "Expected exactly one argument: database");
+        js_throw_error(env, NULL, "Expected exactly one argument: database");
         return NULL;
     }
 
     bare_duckdb_t *db;
     err = js_get_value_external(env, argv[0], (void **) &db);
-    assert(err == 0);
+    if (err != 0) {
+        js_throw_error(env, NULL, "Failed to close database");
+        return NULL;
+    }
 
     if (db == NULL) {
       return NULL;
@@ -158,7 +182,10 @@ bare_duckdb_close(js_env_t *env, js_callback_info_t *info) {
 
     js_value_t *undefined;
     err = js_get_undefined(env, &undefined);
-    assert(err == 0);
+    if (err != 0) {
+        js_throw_error(env, NULL, "Unexpected error");
+        return NULL;
+    }
     return undefined;
 }
 
@@ -170,23 +197,33 @@ bare_duckdb__on_after_connect(uv_work_t *handle, int status) {
     int err;
 
     err = js_open_handle_scope(env, &scope);
-    assert(err == 0);
+    if (err != 0) {
+        if (req->error) free(req->error);
+        free(req);
+        return;
+    }
 
     js_value_t *result;
 
     if (status < 0) {
         // libuv error
         err = js_create_string_utf8(env, (const utf8_t *) uv_strerror(status), -1, &result);
-        assert(err == 0);
+        if (err != 0) {
+            js_get_null(env, &result);
+        }
         js_reject_deferred(env, req->deferred, result);
     } else if (req->error != NULL) {
         // duckdb error
         err = js_create_string_utf8(env, (const utf8_t *) req->error, - 1, &result);
-        assert(err == 0);
+        if (err != 0) {
+            js_get_null(env, &result);
+        }
         js_reject_deferred(env, req->deferred, result);
     } else if (req->db->connection == NULL) {
         err = js_create_string_utf8(env, (const utf8_t *) "Connection failed", -1, &result);
-        assert(err == 0);
+        if (err != 0) {
+            js_get_null(env, &result);
+        }
         js_reject_deferred(env, req->deferred, result);
     } else {
         // we did it
