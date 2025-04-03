@@ -5,6 +5,12 @@ find_package(cmake-fetch REQUIRED PATHS node_modules/cmake-fetch)
 
 project(bare_duckdb C CXX)
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_MACOSX_BUNDLE OFF)
+
 fetch_package("github:duckdb/duckdb@1.2.1" SOURCE_DIR duckdb_src)
 
 add_bare_module(bare_duckdb)
@@ -20,6 +26,14 @@ target_include_directories(
   PRIVATE
     ${duckdb_src}/src/include
 )
+
+if(WIN32)
+  target_compile_definitions(
+    ${bare_duckdb}
+    PRIVATE
+      DUCKDB_STATIC_BUILD
+  )
+endif()
 
 target_link_libraries(
   ${bare_duckdb}
