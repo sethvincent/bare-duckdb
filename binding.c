@@ -384,6 +384,11 @@ bare_duckdb__on_after_query(uv_work_t *handle, int status) {
         // we have a result
         result_value = bare_duckdb_result_to_js(env, req->result);
         js_resolve_deferred(env, req->deferred, result_value);
+
+        // Free the result memory
+        duckdb_destroy_result(req->result);
+        free(req->result);
+        req->result = NULL;
     }
 
     err = js_close_handle_scope(env, scope);
