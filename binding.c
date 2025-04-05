@@ -88,6 +88,8 @@ bare_duckdb_open(js_env_t *env, js_callback_info_t *info) {
 
 
     bare_duckdb_t *db = malloc(sizeof(bare_duckdb_t));
+    printf("DEBUG: sizeof(bare_duckdb_t) in open: %zu\n", sizeof(bare_duckdb_t));
+
     if (db == NULL) {
         if (path) free(path);
         js_throw_error(env, NULL, "Out of Memory");
@@ -256,29 +258,38 @@ bare_duckdb_connect(js_env_t *env, js_callback_info_t *info) {
     js_value_t *argv[1];
 
     err = js_get_callback_info(env, info, &argc, argv, NULL, NULL);
-    assert(err == 0);
+    if (err != 0) {
+        js_throw_error(env, NULL, "Failed to get duckdb instance");
+        return NULL;
+    }
 
     if (argc != 1) {
-        js_throw_error(env, "Error", "Expected exactly one argument: database");
+        js_throw_error(env, NULL, "Expected exactly one argument: database");
         return NULL;
     }
 
     uv_loop_t *loop;
     err = js_get_env_loop(env, &loop);
-    assert(err == 0);
+    if (err != 0) {
+        js_throw_error(env, NULL, "Failed to get event loop");
+        return NULL;
+    }
 
     bare_duckdb_t *db;
     err = js_get_value_external(env, argv[0], (void **) &db);
-    assert(err == 0);
+    if (err != 0) {
+        js_throw_error(env, NULL, "Failed to get duckdb instance");
+        return NULL;
+    }
 
     if (!db || !db->handle) {
-        js_throw_error(env, "Error", "Invalid database handle");
+        js_throw_error(env, NULL, "Invalid database handle");
         return NULL;
     }
 
     bare_duckdb_connect_t *req = malloc(sizeof(bare_duckdb_connect_t));
     if (!req) {
-        js_throw_error(env, "Error", "Out of memory");
+        js_throw_error(env, NULL, "Out of memory allocating connection request");
         return NULL;
     }
 
@@ -288,10 +299,18 @@ bare_duckdb_connect(js_env_t *env, js_callback_info_t *info) {
 
     js_value_t *promise;
     err = js_create_promise(env, &req->deferred, &promise);
-    assert(err == 0);
+    if (err != 0) {
+       free(req);
+       js_throw_error(env, NULL, "Failed to create promise");
+       return NULL;
+   }
 
     err = uv_queue_work(loop, &req->handle, bare_duckdb__on_before_connect, bare_duckdb__on_after_connect);
-    assert(err == 0);
+    if (err != 0) {
+       free(req);
+       js_throw_error(env, NULL, "Failed to create connection");
+       return NULL;
+   }
 
     return promise;
 }
@@ -303,7 +322,10 @@ bare_duckdb_disconnect(js_env_t *env, js_callback_info_t *info) {
   js_value_t *argv[1];
 
   err = js_get_callback_info(env, info, &argc, argv, NULL, NULL);
-  assert(err == 0);
+  if (err != 0) {
+      js_throw_error(env, NULL, "Failed to get duckdb instance");
+      return NULL;
+  }
 
   if (argc != 1) {
     js_throw_error(env, "Error", "Expected exactly one argument: database object");
@@ -312,10 +334,13 @@ bare_duckdb_disconnect(js_env_t *env, js_callback_info_t *info) {
 
     bare_duckdb_t *db;
     err = js_get_value_external(env, argv[0], (void**) &db);
-    assert(err == 0);
+    if (err != 0) {
+        js_throw_error(env, NULL, "Failed to get duckdb instance");
+        return NULL;
+    }
 
     if (!db) {
-        js_throw_error(env, "Error", "Invalid database object");
+        js_throw_error(env, NULL, "Invalid database object");
         return NULL;
     }
 
@@ -368,6 +393,7 @@ bare_duckdb_result_to_js(js_env_t *env, duckdb_result *result) {
                 case DUCKDB_TYPE_SMALLINT:
                 case DUCKDB_TYPE_TINYINT: {
                     int64_t int_val = duckdb_value_int64(result, row_idx, col_idx);
+                    printf("DEBUG: bare_duckdb_result_to_js - Integer Value: %lld\n", int_val);
                     err = js_create_double(env, (double)int_val, &cell_value);
                     assert(err == 0);
                     break;
@@ -475,6 +501,7 @@ bare_duckdb__on_before_query(uv_work_t *handle) {
 
     if (duckdb_query(req->db->connection, req->query, req->result) != DuckDBSuccess) {
         req->error = strdup(duckdb_result_error(req->result));
+        printf("DEBUG: duckdb_query FAILED: %s\n", req->error);
         duckdb_destroy_result(req->result);
         free(req->result);
         req->result = NULL;

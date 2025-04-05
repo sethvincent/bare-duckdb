@@ -27,7 +27,6 @@ class Duckdb {
     }
 
     disconnect () {
-        console.log(this.duckdb)
         binding.disconnect()
     }
 

@@ -51,7 +51,7 @@ test('hello bindings', async (t) => {
         t.is(result[0].value, 2, 'value should be 2')
 
         const stringResult = await duckdb.query(db, 'SELECT \'hello\' AS text')
-        console.log('bindings text result', result)
+        console.log('bindings text result', stringResult)
         t.ok(Array.isArray(stringResult), 'stringResult should be an array')
         t.is(stringResult[0].text, 'hello', 'text should be "hello"')
 
