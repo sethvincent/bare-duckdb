@@ -1,5 +1,12 @@
 # bare-duckdb
 
+> A [DuckDB](https://github.com/duckdb/duckdb) native-addon for the JavaScript runtime [Bare](https://github.com/holepunchto/bare).
+
+## ⚠️ Warning: work in progress! ⚠️
+
+Only macos is supported currently. I'm working on Linux and Windows!
+
+Using bare-duckdb right now requires participating in its development. I'd be happy for the help!
 
 ## Building
 

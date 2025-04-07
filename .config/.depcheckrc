@@ -10,7 +10,7 @@ skipMissing: false
 
 # ignore dependencies that matches these globs
 # @eslint/js and globals are dependencies of dxv so they are ignored
-ignoreMatches: ["@eslint/js", "globals"]
+ignoreMatches: ["@eslint/js", "globals", "cmake-*", "bare-compat-napi"]
 
 # patterns matching these globs will be ignored
 ignorePatterns: []

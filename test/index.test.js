@@ -26,7 +26,6 @@ test('hello Duckdb', async (t) => {
         console.log('text result', result)
         t.ok(Array.isArray(result), 'stringResult should be an array')
         t.is(result[0].text, 'hello', 'text should be "hello"')
-
     } catch (error) {
         console.error('unexpected Duckdb query error', error)
     }
